@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>ĐỀ NGHỊ THANH TOÁN CẦN DUYỆT - DTA SPACE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:20px;}
+        .container {max-width:1500px; margin:auto; background:white; padding:30px; border-radius:12px; box-shadow:0 0 20px rgba(0,0,0,0.1);}
+        h1 {color:#a41017; border-bottom:3px solid #a41017; padding-bottom:10px;}
+        h2 {color:#d32f2f; margin-top:30px;}
+        table {width:100%; border-collapse:collapse; margin:25px 0;}
+        th, td {border:1px solid #ddd; padding:14px; text-align:center;}
+        th {background:#a41017; color:white; font-weight:bold;}
+        tr:nth-child(even) {background:#f9f9f9;}
+        .btn {padding:10px 22px; margin:5px; text-decoration:none; border-radius:6px; color:white; font-weight:bold; display:inline-block; min-width:90px; font-size:14px;}
+        .approve {background:#4caf50;}
+        .approve:hover {background:#45a049;}
+        .link {color:#a41017; text-decoration:none; font-weight:bold;}
+        .link:hover {text-decoration:underline;}
+        .file-link {color:#a41017; text-decoration:underline; font-weight:bold;}
+        .file-link:hover {text-decoration:none;}
+        .no-data {text-align:center; padding:60px; color:#666; font-size:20px;}
+        .status-cho {color:#ff9800; font-weight:bold;}
+        .status-cap2 {color:#e65100; font-weight:bold; background:#fff3e0; padding:4px 8px; border-radius:4px;}
+        .waiting {color:#888; font-style:italic;}
+        .payment-method {font-weight:bold; color:#d32f2f;}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Xin chào, {{ user.name }} ({{ user.role }})</h1>
+    <p>
+        {% if user.email != "truongkhuong@dieutuongam.com" %}
+            <a href="{{ url_for('request_payment') }}" class="link">Tạo đề nghị thanh toán mới</a> |
+        {% endif %}
+        <a href="{{ url_for('payment_list') }}" class="link">Xem tất cả đề nghị thanh toán</a> |
+        <a href="{{ url_for('logout') }}" style="color:#d32f2f;">Đăng xuất</a>
+    </p>
+
+    <h2>ĐỀ NGHỊ THANH TOÁN CẦN DUYỆT ({{ pending|length }})</h2>
+
+    {% if pending %}
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Tiêu đề</th>
+            <th>Người gửi</th>
+            <th>Phòng ban</th>
+            <th>Thành phố</th>
+            <th>Phương thức</th>
+            <th>Tổng chi phí (VND)</th>
+            <th>Tệp đính kèm</th>
+            <th>Người duyệt hiện tại</th>
+            <th>Người duyệt tiếp theo</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
+        </tr>
+        {% for p in pending %}
+        <tr>
+            <td><strong>#{{ p[0] }}</strong></td>
+            <td style="text-align:left; font-weight:bold;">{{ p[1] }}</td>
+            <td>{{ p[8] }}</td> <!-- submitter_name -->
+            <td>{{ p[3] }}</td>
+            <td>{{ p[4] }}</td>
+            <td class="payment-method">{{ p[2] }}</td> <!-- payment_method -->
+            <td style="text-align:right; font-weight:bold; color:#d32f2f;">
+                {% if p[12] and p[12] > 0 %}
+                    {{ "{:,.0f}".format(p[12]) }}
+                {% else %}—{% endif %}
+            </td>
+            <td>
+                {% if p[11] %}
+                    <a href="{{ url_for('uploaded_file', filename=p[11]) }}" class="file-link" target="_blank">Xem tệp</a>
+                {% else %}—{% endif %}
+            </td>
+            <td>{{ p[6] }}</td> <!-- approver gốc -->
+            <td style="background:#fff3e0; font-weight:bold; color:#d32f2f;">
+                {% if p[13] %}
+                    {{ p[13] }}
+                    {% if p[13].split(" - ")[0] in ["TRƯƠNG HUỆ KHƯƠNG", "NGUYỄN THỊ HỒNG TUYẾT"] %}
+                        <strong style="color:#c62828;">(BOD - Cuối cùng)</strong>
+                    {% endif %}
+                {% else %}
+                    {{ p[6] }} <em style="color:#666;">(đang duyệt đầu)</em>
+                {% endif %}
+            </td>
+            <td>
+                {% if p[10] == 'Chờ duyệt cấp 2' %}
+                    <span class="status-cap2">Chờ duyệt cấp 2</span>
+                {% elif p[10] == 'Đã duyệt' %}
+                    <span style="color:#2e7d32; font-weight:bold;">Đã duyệt</span>
+                {% elif p[10] == 'Từ chối' %}
+                    <span style="color:#d32f2f; font-weight:bold;">Từ chối</span>
+                {% else %}
+                    <span class="status-cho">Chờ duyệt</span>
+                {% endif %}
+            </td>
+            <td>
+                {% set my_full = user.name ~ " - " ~ user.department %}
+                {% set is_my_turn = (p[6] == my_full) or (p[13] and p[13]|trim == my_full) %}
+                {% if is_my_turn and p[10] != 'Đã duyệt' and p[10] != 'Từ chối' %}
+                    <a href="{{ url_for('approve', req_id=p[0]) }}" class="btn approve">
+                        {% if p[13] and p[13].split(" - ")[0] in ["TRƯƠNG HUỆ KHƯƠNG", "NGUYỄN THỊ HỒNG TUYẾT"] %}
+                            Duyệt cuối (BOD)
+                        {% elif p[10] == 'Chờ duyệt cấp 2' %}
+                            Duyệt cấp 2
+                        {% else %}
+                            Duyệt cấp 1
+                        {% endif %}
+                    </a>
+                {% else %}
+                    <span class="waiting">Đang chờ</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="no-data">
+        Hiện không có đề nghị thanh toán nào cần duyệt.<br><br>
+        {% if user.email != "truongkhuong@dieutuongam.com" %}
+            <a href="{{ url_for('request_payment') }}" style="color:#a41017; font-size:20px; font-weight:bold;">
+                Tạo đề nghị thanh toán mới ngay!
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>DANH SÁCH ĐỀ NGHỊ THANH TOÁN - DTA SPACE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:20px;}
+        .container {max-width:1500px; margin:auto; background:white; padding:30px; border-radius:12px; box-shadow:0 0 20px rgba(0,0,0,0.1);}
+        h1 {color:#a41017; border-bottom:3px solid #a41017; padding-bottom:10px;}
+        h2.city {color:#a41017; font-size:26px; margin:40px 0 20px;}
+        table {width:100%; border-collapse:collapse; margin:20px 0;}
+        th {background:#a41017; color:white; padding:15px; text-align:center;}
+        td {padding:12px; border-bottom:1px solid #eee; text-align:center;}
+        tr:nth-child(even) {background:#f9f9f9;}
+        .status-duyet {color:#2e7d32; font-weight:bold;}
+        .status-cho {color:#ff9800; font-weight:bold;}
+        .status-tuchoi {color:#d32f2f; font-weight:bold;}
+        .file-link {color:#a41017; text-decoration:underline;}
+        .back-link {color:#a41017; font-weight:bold; text-decoration:none;}
+        .back-link:hover {text-decoration:underline;}
+        .summary {background:#e3f2fd; padding:18px; border-radius:8px; margin:20px 0; font-size:17px; font-weight:bold;}
+        .payment-method {font-weight:bold; color:#d32f2f;}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>DANH SÁCH ĐỀ NGHỊ THANH TOÁN TOÀN CÔNG TY</h1>
+    <p>Xin chào <strong>{{ user.name }}</strong> ({{ user.role }}) |
+       <a href="{{ url_for('dashboard') }}" class="back-link">Về trang duyệt</a> |
+       <a href="{{ url_for('logout') }}">Đăng xuất</a>
+    </p>
+
+    <div class="summary">
+        Tổng cộng: {{ requests|length }} đề nghị thanh toán
+        ({{ requests|selectattr(4, "equalto", "HỒ CHÍ MINH")|list|length }} HCM - 
+         {{ requests|selectattr(4, "equalto", "HÀ NỘI")|list|length }} HN)
+    </div>
+
+    <!-- BOD xem riêng theo thành phố -->
+    {% if user.role == "BOD" %}
+        {% set hcm = requests|selectattr(4, "equalto", "HỒ CHÍ MINH")|list %}
+        {% set hn = requests|selectattr(4, "equalto", "HÀ NỘI")|list %}
+
+        {% if hcm %}
+        <h2 class="city">TP. HỒ CHÍ MINH ({{ hcm|length }})</h2>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Tiêu đề</th>
+                <th>Người gửi</th>
+                <th>Phòng ban</th>
+                <th>Phương thức</th>
+                <th>Tổng chi phí</th>
+                <th>Tệp</th>
+                <th>Trạng thái</th>
+            </tr>
+            {% for p in hcm %}
+            <tr>
+                <td><strong>#{{ p[0] }}</strong></td>
+                <td style="text-align:left;">{{ p[1] }}</td>
+                <td>{{ p[8] }}</td>
+                <td style="color:#a41017; font-weight:bold;">{{ p[3] }}</td>
+                <td class="payment-method">{{ p[2] }}</td>
+                <td style="text-align:right; color:#1976d2; font-weight:bold;">
+                    {% if p[12] > 0 %}{{ "{:,.0f}".format(p[12]) }} VND{% else %}—{% endif %}
+                </td>
+                <td>{% if p[11] %}<a href="{{ url_for('uploaded_file', filename=p[11]) }}" class="file-link">Xem</a>{% else %}—{% endif %}</td>
+                <td>
+                    {% if p[10] == 'Đã duyệt' %}<span class="status-duyet">Đã duyệt</span>
+                    {% elif p[10] == 'Từ chối' %}<span class="status-tuchoi">Từ chối</span>
+                    {% else %}<span class="status-cho">Chờ duyệt</span>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if hn %}
+        <h2 class="city">HÀ NỘI ({{ hn|length }})</h2>
+        <table>
+            <!-- Tương tự như trên -->
+            <!-- (giống HCM, chỉ đổi màu phòng ban nếu muốn) -->
+        </table>
+        {% endif %}
+
+    {% else %}
+        <!-- Manager & Employee xem dạng bảng đầy đủ -->
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Tiêu đề</th>
+                <th>Người gửi</th>
+                <th>Phòng ban</th>
+                <th>Thành phố</th>
+                <th>Phương thức</th>
+                <th>Tổng chi phí</th>
+                <th>Tệp</th>
+                <th>Trạng thái</th>
+            </tr>
+            {% for p in requests %}
+            <tr>
+                <td><strong>#{{ p[0] }}</strong></td>
+                <td style="text-align:left;">{{ p[1] }}</td>
+                <td>{{ p[8] }}</td>
+                <td>{{ p[3] }}</td>
+                <td style="color:#d32f2f; font-weight:bold;">{{ p[4] }}</td>
+                <td class="payment-method">{{ p[2] }}</td>
+                <td style="text-align:right; color:#a41017; font-weight:bold;">
+                    {% if p[12] > 0 %}{{ "{:,.0f}".format(p[12]) }} VND{% else %}—{% endif %}
+                </td>
+                <td>{% if p[11] %}<a href="{{ url_for('uploaded_file', filename=p[11]) }}" class="file-link">Xem</a>{% else %}—{% endif %}</td>
+                <td>
+                    {% if p[10] == 'Đã duyệt' %}<span class="status-duyet">Đã duyệt</span>
+                    {% elif p[10] == 'Từ chối' %}<span class="status-tuchoi">Từ chối</span>
+                    {% else %}<span class="status-cho">Chờ duyệt</span>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+</div>
+</body>
+</html>
