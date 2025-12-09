@@ -19,12 +19,13 @@
         .link {color:#a41017; text-decoration:none; font-weight:bold;}
         .link:hover {text-decoration:underline;}
         .file-link {color:#a41017; text-decoration:underline; font-weight:bold;}
-        .file-link:hover {text-decoration:none;}
         .no-data {text-align:center; padding:60px; color:#666; font-size:20px;}
         .status-cho {color:#ff9800; font-weight:bold;}
-        .status-cap2 {color:#e65100; font-weight:bold; background:#fff3e0; padding:4px 8px; border-radius:4px;}
         .waiting {color:#888; font-style:italic;}
         .payment-method {font-weight:bold; color:#d32f2f;}
+        .current-approver {background:#fff3e0; font-weight:bold; color:#d32f2f;}
+        .next-approver {font-weight:bold;}
+        .bod-highlight {color:#c62828; font-weight:bold;}
     </style>
 </head>
 <body>
@@ -35,6 +36,7 @@
             <a href="{{ url_for('request_payment') }}" class="link">Tạo đề nghị thanh toán mới</a> |
         {% endif %}
         <a href="{{ url_for('payment_list') }}" class="link">Xem tất cả đề nghị thanh toán</a> |
+        <a href="{{ url_for('change_password') }}" style="color:#1976d2;">Đổi mật khẩu</a> |
         <a href="{{ url_for('logout') }}" style="color:#d32f2f;">Đăng xuất</a>
     </p>
 
@@ -52,7 +54,7 @@
             <th>Tổng chi phí (VND)</th>
             <th>Tệp đính kèm</th>
             <th>Người duyệt hiện tại</th>
-            <th>Người duyệt tiếp theo</th>
+            <th>Lịch sử duyệt</th>
             <th>Trạng thái</th>
             <th>Hành động</th>
         </tr>
@@ -60,10 +62,10 @@
         <tr>
             <td><strong>#{{ p[0] }}</strong></td>
             <td style="text-align:left; font-weight:bold;">{{ p[1] }}</td>
-            <td>{{ p[8] }}</td> <!-- submitter_name -->
+            <td>{{ p[8] }}</td>
             <td>{{ p[3] }}</td>
             <td>{{ p[4] }}</td>
-            <td class="payment-method">{{ p[2] }}</td> <!-- payment_method -->
+            <td class="payment-method">{{ p[2] }}</td>
             <td style="text-align:right; font-weight:bold; color:#d32f2f;">
                 {% if p[12] and p[12] > 0 %}
                     {{ "{:,.0f}".format(p[12]) }}
@@ -74,21 +76,30 @@
                     <a href="{{ url_for('uploaded_file', filename=p[11]) }}" class="file-link" target="_blank">Xem tệp</a>
                 {% else %}—{% endif %}
             </td>
-            <td>{{ p[6] }}</td> <!-- approver gốc -->
-            <td style="background:#fff3e0; font-weight:bold; color:#d32f2f;">
-                {% if p[13] %}
-                    {{ p[13] }}
-                    {% if p[13].split(" - ")[0] in ["TRƯƠNG HUỆ KHƯƠNG", "NGUYỄN THỊ HỒNG TUYẾT"] %}
-                        <strong style="color:#c62828;">(BOD - Cuối cùng)</strong>
-                    {% endif %}
-                {% else %}
-                    {{ p[6] }} <em style="color:#666;">(đang duyệt đầu)</em>
+
+            <!-- NGƯỜI DUYỆT HIỆN TẠI -->
+            <td class="current-approver">
+                {{ p[6].split(" - ")[0] }}
+                {% if "BOD" in p[6] %}
+                    <span class="bod-highlight"> (BOD - Cuối cùng)</span>
                 {% endif %}
             </td>
+
+            <!-- LỊCH SỬ DUYỆT -->
+            <td class="next-approver">
+                {% if p[13] and p[13]|trim != '' %}
+                    {{ p[13] }}
+                    {% if "TRƯƠNG HUỆ KHƯƠNG" in p[13] or "NGUYỄN THỊ HỒNG TUYẾT" in p[13] %}
+                        → <span class="bod-highlight">BOD (Cuối cùng)</span>
+                    {% endif %}
+                {% else %}
+                    {{ p[6].split(" - ")[0] }} <em style="color:#666;">(chờ duyệt đầu tiên)</em>
+                {% endif %}
+            </td>
+
+            <!-- TRẠNG THÁI -->
             <td>
-                {% if p[10] == 'Chờ duyệt cấp 2' %}
-                    <span class="status-cap2">Chờ duyệt cấp 2</span>
-                {% elif p[10] == 'Đã duyệt' %}
+                {% if p[10] == 'Đã duyệt' %}
                     <span style="color:#2e7d32; font-weight:bold;">Đã duyệt</span>
                 {% elif p[10] == 'Từ chối' %}
                     <span style="color:#d32f2f; font-weight:bold;">Từ chối</span>
@@ -96,21 +107,20 @@
                     <span class="status-cho">Chờ duyệt</span>
                 {% endif %}
             </td>
+
+            <!-- NÚT HÀNH ĐỘNG - ĐÃ SỬA CHÍNH XÁC 100% -->
             <td>
                 {% set my_full = user.name ~ " - " ~ user.department %}
-                {% set is_my_turn = (p[6] == my_full) or (p[13] and p[13]|trim == my_full) %}
-                {% if is_my_turn and p[10] != 'Đã duyệt' and p[10] != 'Từ chối' %}
-                    <a href="{{ url_for('approve', req_id=p[0]) }}" class="btn approve">
-                        {% if p[13] and p[13].split(" - ")[0] in ["TRƯƠNG HUỆ KHƯƠNG", "NGUYỄN THỊ HỒNG TUYẾT"] %}
+                {% if p[6] == my_full and p[10] not in ['Đã duyệt', 'Từ chối'] %}
+                    <a href="{{ url_for('approve', prop_id=p[0]) }}" class="btn approve">
+                        {% if user.role == "BOD" %}
                             Duyệt cuối (BOD)
-                        {% elif p[10] == 'Chờ duyệt cấp 2' %}
-                            Duyệt cấp 2
                         {% else %}
-                            Duyệt cấp 1
+                            Duyệt & chuyển
                         {% endif %}
                     </a>
                 {% else %}
-                    <span class="waiting">Đang chờ</span>
+                    <span class="waiting">Đang chờ người khác</span>
                 {% endif %}
             </td>
         </tr>
@@ -118,7 +128,7 @@
     </table>
     {% else %}
     <div class="no-data">
-        Hiện không có đề nghị thanh toán nào cần duyệt.<br><br>
+        Hiện không có đề nghị thanh toán nào cần bạn duyệt.<br><br>
         {% if user.email != "truongkhuong@dieutuongam.com" %}
             <a href="{{ url_for('request_payment') }}" style="color:#a41017; font-size:20px; font-weight:bold;">
                 Tạo đề nghị thanh toán mới ngay!

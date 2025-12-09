@@ -78,7 +78,7 @@
 
     <form method="POST" enctype="multipart/form-data">
         <label>Ngày lập:</label>
-        <input type="text" value="{{ today }}" disabled>
+        <input type="text" value="{{today.strftime('%d/%m/%Y')}}" disabled>
 
         <label>Người lập:</label>
         <input type="text" value="{{ user.name }}" disabled>
