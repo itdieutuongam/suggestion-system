@@ -55,7 +55,8 @@ def init_db():
     ("hongtuyet@dieutuongam.com",    "NGUYỄN THỊ HỒNG TUYẾT",      "123456", "BOD",      "BOD"),
 
     # ==================== PHÒNG HCNS-IT ====================
-    ("it@dieutuongam.com",           "TRẦN CÔNG KHÁNH",            "123456", "Manager",  "PHÒNG HCNS-IT"),
+    ("it@dieutuongam.com",           "TRẦN CÔNG KHÁNH",            "123456", "Employee",  "PHÒNG HCNS-IT"),
+    ("haphung.dta@gmail.com",           "PHÙNG THỊ THU HÀ",            "123456", "Employee",  "PHÒNG HCNS-IT"),
     ("anthanh@dieutuongam.com",      "NGUYỄN THỊ AN THANH",        "123456", "Manager",  "PHÒNG HCNS-IT"),
     ("hcns@dieutuongam.com",         "NHÂN SỰ DTA",                "123456", "Employee", "PHÒNG HCNS-IT"),
     ("yennhi@dieutuongam.com",       "TRẦN NGỌC YẾN NHI",          "123456", "Employee", "PHÒNG HCNS-IT"),
